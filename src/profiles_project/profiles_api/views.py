@@ -9,7 +9,10 @@ from . import permissions
 from rest_framework.authentication import TokenAuthentication
 from . import serializers
 from rest_framework import filters
-
+from rest_framework.authtoken.serializers import AuthTokenSerializer
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 
 # Create your views here.
 
@@ -111,4 +114,26 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (permissions.UpdateOwnProfile,)
     filter_backends = (filters.SearchFilter,)
-    search_fields = ('name','email',)
+    search_fields = ('name','email',)\
+
+class LoginViewSet(viewsets.ViewSet):
+    """ Check email and password and returns auth token"""
+
+    serializer_class = AuthTokenSerializer
+
+    def create(self, request):
+        """ Use the obtain token apiView"""
+        return ObtainAuthToken().post(request)
+
+class ProfileFeedViewSet(viewsets.ModelViewSet):
+    """ Handles Creating, updating, reading profile feed items"""
+    authentication_classes = (TokenAuthentication,)
+    serializer_class = serializers.ProfileFeedItemSerializer
+    queryset = models.ProfileFeedItem.objects.all()
+    permission_classes = (permissions.PostOwnStatus, IsAuthenticated)
+
+    def perform_create(self, serializer):
+        """ sets the user profile to logged in users"""
+
+        serializer.save(user_profile = self.request.user)
+
